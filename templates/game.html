@@ -68,10 +68,23 @@
 
     <!-- Main Game Area -->
     <div id="gameArea" class="game-section hidden">
-        <!-- Word selection for actor - at the very top -->
-        <div id="wordSelection" class="word-selection-top hidden">
-            <h3>🎯 Choose a word to act:</h3>
-            <div id="wordChoices" class="word-choices"></div>
+        <!-- 
+            WORD SELECTION OVERLAY (FIX: Centered popup with dimmed background)
+            ====================================================================
+            This overlay appears when the actor needs to choose a word.
+            - The dark backdrop dims the rest of the screen
+            - The popup is centered both horizontally and vertically
+            - Works on all screen sizes (responsive)
+        -->
+        <div id="wordSelectionOverlay" class="word-selection-overlay hidden">
+            <!-- Dark backdrop that covers the entire screen -->
+            <div class="overlay-backdrop"></div>
+            
+            <!-- Centered popup content -->
+            <div id="wordSelection" class="word-selection-popup">
+                <h3>🎯 Choose a word to act:</h3>
+                <div id="wordChoices" class="word-choices"></div>
+            </div>
         </div>
         
         <div class="game-header">
