@@ -66,27 +66,24 @@
         </div>
     </div>
 
-    <!-- Main Game Area -->
-    <div id="gameArea" class="game-section hidden">
-        <!-- 
-            WORD SELECTION OVERLAY (FIX: Centered popup with dimmed background)
-            ====================================================================
-            This overlay appears when the actor needs to choose a word.
-            - The dark backdrop dims the rest of the screen
-            - The popup is centered both horizontally and vertically
-            - Works on all screen sizes (responsive)
-        -->
-        <div id="wordSelectionOverlay" class="word-selection-overlay hidden">
-            <!-- Dark backdrop that covers the entire screen -->
-            <div class="overlay-backdrop"></div>
-            
-            <!-- Centered popup content -->
-            <div id="wordSelection" class="word-selection-popup">
-                <h3>🎯 Choose a word to act:</h3>
-                <div id="wordChoices" class="word-choices"></div>
+    <!-- Word Selection Modal Popup -->
+    <div id="wordSelectionModal" class="word-modal-overlay hidden">
+        <div class="word-modal">
+            <div class="word-modal-glow"></div>
+            <div class="word-modal-content">
+                <div class="word-modal-icon">🎯</div>
+                <h2 class="word-modal-title">Your Turn to Act!</h2>
+                <p class="word-modal-subtitle">Choose a word to perform with sign language</p>
+                <div id="wordChoices" class="word-choices-modal"></div>
+                <div class="word-modal-timer">
+                    <span>⏱️ Choose quickly!</span>
+                </div>
             </div>
         </div>
-        
+    </div>
+
+    <!-- Main Game Area -->
+    <div id="gameArea" class="game-section hidden">
         <div class="game-header">
             <div class="round-info">
                 Round <span id="currentRound">1</span> / <span id="maxRounds">10</span>
@@ -177,4 +174,4 @@
 {% block extra_js %}
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script src="{{ url_for('static', filename='js/game.js') }}"></script>
-{% endblock %}
+{% endblock %}  
