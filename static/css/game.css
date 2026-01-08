@@ -531,7 +531,90 @@ body {
     opacity: 0.8;
 }
 
-/* Word Selection - Top of Screen */
+/* =============================================================================
+   WORD SELECTION POPUP WITH DIMMED OVERLAY
+   
+   FIX: Centered popup that dims the rest of the screen.
+   - Uses fixed positioning to cover the entire viewport
+   - Flexbox centers the popup both horizontally and vertically
+   - Semi-transparent backdrop creates the "dimmed" effect
+   - Works on all screen sizes (mobile, tablet, desktop)
+   ============================================================================= */
+
+/* 
+   Overlay Container: Covers the entire screen when visible.
+   Uses position:fixed so it stays in place even if page scrolls.
+*/
+.word-selection-overlay {
+    position: fixed;           /* Stay fixed relative to viewport */
+    top: 0;
+    left: 0;
+    width: 100vw;              /* Cover full viewport width */
+    height: 100vh;             /* Cover full viewport height */
+    z-index: 1000;             /* Appear above all other content */
+    display: flex;             /* Use flexbox for centering */
+    justify-content: center;   /* Center horizontally */
+    align-items: center;       /* Center vertically */
+}
+
+/* 
+   Dark Backdrop: The semi-transparent overlay that dims everything else.
+   Positioned absolutely to fill the parent overlay container.
+*/
+.word-selection-overlay .overlay-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);  /* Black with 75% opacity for dimming */
+    backdrop-filter: blur(4px);        /* Optional: adds blur effect to background */
+}
+
+/* 
+   Popup Content: The actual word selection card.
+   Uses position:relative to appear above the backdrop.
+   z-index ensures it's above the dark backdrop.
+*/
+.word-selection-popup {
+    position: relative;        /* Needed to appear above the backdrop */
+    z-index: 1;                /* Above the backdrop (which is z-index: auto) */
+    text-align: center;
+    padding: 2rem 3rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-radius: 20px;
+    max-width: 90%;            /* Responsive: don't exceed screen width */
+    max-height: 80vh;          /* Don't exceed 80% of viewport height */
+    overflow-y: auto;          /* Scroll if content is too tall */
+    box-shadow: 
+        0 0 40px rgba(108, 99, 255, 0.6),  /* Outer glow effect */
+        0 20px 60px rgba(0, 0, 0, 0.5);     /* Drop shadow for depth */
+    animation: popup-appear 0.3s ease-out;  /* Smooth entrance animation */
+}
+
+/* 
+   Popup Entrance Animation: Scales up and fades in for a polished feel.
+*/
+@keyframes popup-appear {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Popup title styling */
+.word-selection-popup h3 {
+    margin-bottom: 1.5rem;
+    font-size: 1.6rem;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Word Selection - Old top-of-screen style (kept for backward compatibility) */
 .word-selection-top {
     text-align: center;
     padding: 1.5rem;
