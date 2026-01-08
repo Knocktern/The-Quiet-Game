@@ -261,7 +261,7 @@ class GameState:
     
     def get_game_state(self) -> Dict[str, Any]:
         """Get the full game state for synchronization."""
-        return {
+        state = {
             "room_code": self.room_code,
             "players": {
                 uid: {
@@ -279,6 +279,18 @@ class GameState:
             "difficulty": self.difficulty,
             "leaderboard": self.get_leaderboard()
         }
+        
+        # Include current round details for mid-game joins
+        if self.current_round and self.game_started:
+            state["round_info"] = {
+                "round_number": self.current_round.round_number,
+                "category": self.current_round.category,
+                "word_length": len(self.current_round.word) if self.current_round.word else 0,
+                "actor_id": self.current_round.actor_id,
+                "time_remaining": self.current_round.time_remaining
+            }
+        
+        return state
     
     def get_final_results(self) -> Dict[str, Any]:
         """Get final game results."""

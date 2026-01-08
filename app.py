@@ -132,6 +132,7 @@ def handle_disconnect():
 def handle_join_game(data: dict):
     """
     Handle user joining a game room.
+    Supports joining mid-game - player will be added and synced with current round.
     """
     room_code = data.get('roomCode', '').upper()
     user_id = data.get('userId', '')
@@ -161,17 +162,24 @@ def handle_join_game(data: dict):
     # Add player to game
     game.add_player(user_id, username)
     
+    # Check if game is already in progress (mid-game join)
+    is_mid_game_join = game.game_started and not game.game_ended
+    
     # Send current game state to the new player
-    emit('game-state', game.get_game_state())
+    game_state = game.get_game_state()
+    game_state['is_mid_game_join'] = is_mid_game_join
+    emit('game-state', game_state)
     
     # Notify others that a new user joined
     emit('player-joined', {
         'userId': user_id,
         'username': username,
-        'gameState': game.get_game_state()
+        'gameState': game.get_game_state(),
+        'isMidGameJoin': is_mid_game_join
     }, room=room_code, include_self=False)
     
-    print(f"User {username} joined game {room_code}. Total players: {len(game.players)}")
+    join_type = "mid-game" if is_mid_game_join else "lobby"
+    print(f"User {username} joined game {room_code} ({join_type}). Total players: {len(game.players)}")
 
 
 @socketio.on('leave-game')
@@ -416,23 +424,31 @@ def handle_chat_message(data: dict):
 @socketio.on('offer')
 def handle_offer(data: dict):
     """Handle WebRTC offer for peer connection."""
-    room_code = data.get('roomCode', '').upper()
+    if not data or not isinstance(data, dict):
+        return
+    
+    room_code = (data.get('roomCode') or '').upper()
     offer = data.get('offer')
     user_id = data.get('userId')
+    target_id = data.get('targetId')
     
     if not all([room_code, offer, user_id]):
         return
     
     emit('offer', {
         'offer': offer,
-        'userId': user_id
+        'userId': user_id,
+        'targetId': target_id
     }, room=room_code, include_self=False)
 
 
 @socketio.on('answer')
 def handle_answer(data: dict):
     """Handle WebRTC answer for peer connection."""
-    room_code = data.get('roomCode', '').upper()
+    if not data or not isinstance(data, dict):
+        return
+    
+    room_code = (data.get('roomCode') or '').upper()
     answer = data.get('answer')
     user_id = data.get('userId')
     target_id = data.get('targetId')
@@ -450,7 +466,10 @@ def handle_answer(data: dict):
 @socketio.on('ice-candidate')
 def handle_ice_candidate(data: dict):
     """Handle ICE candidate exchange for WebRTC."""
-    room_code = data.get('roomCode', '').upper()
+    if not data or not isinstance(data, dict):
+        return
+    
+    room_code = (data.get('roomCode') or '').upper()
     candidate = data.get('candidate')
     user_id = data.get('userId')
     target_id = data.get('targetId')

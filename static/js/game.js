@@ -18,6 +18,7 @@ const gameState = {
     gameStarted: false,
     localStream: null,
     peerConnections: {},
+    remoteStreams: {},
     players: {},
     timerInterval: null,
     timeRemaining: 60
@@ -180,11 +181,20 @@ function joinGameRoom() {
 
     showSection('waitingRoom');
     document.getElementById('displayRoomCode').textContent = gameState.roomCode;
+    
+    // Start connection health check
+    startConnectionHealthCheck();
 }
 
 function copyRoomCode() {
     navigator.clipboard.writeText(gameState.roomCode);
     showNotification('Room code copied!', 'success');
+}
+
+function copyGameRoomCode() {
+    const roomCode = document.getElementById('gameRoomCode').textContent;
+    navigator.clipboard.writeText(roomCode);
+    showNotification('Room code copied! Share it with friends to join mid-game!', 'success');
 }
 
 function toggleReady() {
@@ -264,7 +274,12 @@ function toggleAudio() {
 async function createPeerConnection(peerId) {
     // Close existing connection if any
     if (gameState.peerConnections[peerId]) {
-        gameState.peerConnections[peerId].close();
+        try {
+            gameState.peerConnections[peerId].close();
+        } catch (e) {
+            console.log('Error closing existing connection:', e);
+        }
+        delete gameState.peerConnections[peerId];
     }
 
     const pc = new RTCPeerConnection(rtcConfig);
@@ -298,11 +313,16 @@ async function createPeerConnection(peerId) {
             const actorVideo = document.getElementById('actorVideo');
             actorVideo.srcObject = gameState.localStream;
         }
+        
+        // Update participants grid with the new stream
+        if (gameState.gameStarted) {
+            updateParticipantsGrid();
+        }
     };
 
     // Handle ICE candidates - send to specific peer
     pc.onicecandidate = (event) => {
-        if (event.candidate) {
+        if (event.candidate && gameState.roomCode) {
             gameState.socket.emit('ice-candidate', {
                 roomCode: gameState.roomCode,
                 userId: gameState.userId,
@@ -315,6 +335,15 @@ async function createPeerConnection(peerId) {
     // Handle connection state changes
     pc.onconnectionstatechange = () => {
         console.log(`Connection state with ${peerId}: ${pc.connectionState}`);
+        if (pc.connectionState === 'failed') {
+            console.log('Connection failed, attempting reconnect...');
+            // Retry connection after a delay
+            setTimeout(() => {
+                if (gameState.players[peerId]) {
+                    initiateConnection(peerId);
+                }
+            }, 2000);
+        }
     };
 
     pc.oniceconnectionstatechange = () => {
@@ -325,48 +354,67 @@ async function createPeerConnection(peerId) {
 }
 
 async function handleOffer(data) {
-    const { offer, userId: peerId } = data;
+    if (!data) return;
     
-    // Only handle offers meant for us (from specific peer)
-    if (peerId === gameState.userId) return;
+    const { offer, userId: peerId, targetId } = data;
     
-    console.log('Received offer from', peerId);
+    // Only process offers meant for us
+    if (targetId && targetId !== gameState.userId) return;
     
-    const pc = await createPeerConnection(peerId);
-    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    // Don't process our own offers
+    if (!peerId || peerId === gameState.userId) return;
     
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
+    console.log('Received offer from', peerId, 'for', targetId);
     
-    gameState.socket.emit('answer', {
-        roomCode: gameState.roomCode,
-        userId: gameState.userId,
-        targetId: peerId,
-        answer: answer
-    });
-    
-    console.log('Sent answer to', peerId);
+    try {
+        const pc = await createPeerConnection(peerId);
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        
+        gameState.socket.emit('answer', {
+            roomCode: gameState.roomCode,
+            userId: gameState.userId,
+            targetId: peerId,
+            answer: answer
+        });
+        
+        console.log('Sent answer to', peerId);
+    } catch (e) {
+        console.error('Error handling offer:', e);
+    }
 }
 
 async function handleAnswer(data) {
+    if (!data) return;
+    
     const { answer, userId: peerId, targetId } = data;
     
     // Only process answers meant for us
     if (targetId && targetId !== gameState.userId) return;
+    if (!peerId || peerId === gameState.userId) return;
     
     const pc = gameState.peerConnections[peerId];
     
     if (pc && pc.signalingState === 'have-local-offer') {
-        console.log('Received answer from', peerId);
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        try {
+            console.log('Received answer from', peerId);
+            await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        } catch (e) {
+            console.error('Error handling answer:', e);
+        }
     }
 }
 
 async function handleIceCandidate(data) {
+    if (!data) return;
+    
     const { candidate, userId: peerId, targetId } = data;
     
     // Only process ICE candidates meant for us
     if (targetId && targetId !== gameState.userId) return;
+    if (!peerId || peerId === gameState.userId) return;
     
     const pc = gameState.peerConnections[peerId];
     
@@ -380,25 +428,48 @@ async function handleIceCandidate(data) {
 }
 
 async function initiateConnection(peerId) {
+    if (!peerId || peerId === gameState.userId) return;
+    
+    // Skip if already have an active connection
+    const existingPc = gameState.peerConnections[peerId];
+    if (existingPc && (existingPc.connectionState === 'connected' || existingPc.connectionState === 'connecting')) {
+        console.log('Already connected/connecting to', peerId);
+        return;
+    }
+    
     // Use a consistent rule: lower ID initiates the connection
     // This prevents both sides from sending offers simultaneously
     if (gameState.userId > peerId) {
-        console.log('Waiting for offer from', peerId);
+        console.log('Waiting for offer from', peerId, '(they have lower ID)');
         return; // Let the other peer initiate
     }
     
     console.log('Initiating connection to', peerId);
     
-    const pc = await createPeerConnection(peerId);
-    
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    
-    gameState.socket.emit('offer', {
-        roomCode: gameState.roomCode,
-        userId: gameState.userId,
-        offer: offer
-    });
+    try {
+        const pc = await createPeerConnection(peerId);
+        
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        
+        gameState.socket.emit('offer', {
+            roomCode: gameState.roomCode,
+            userId: gameState.userId,
+            targetId: peerId,  // Specify the target peer
+            offer: offer
+        });
+        
+        console.log('Sent offer to', peerId);
+    } catch (e) {
+        console.error('Error initiating connection:', e);
+        // Retry after delay
+        setTimeout(() => {
+            if (gameState.players[peerId]) {
+                delete gameState.peerConnections[peerId];
+                initiateConnection(peerId);
+            }
+        }, 3000);
+    }
 }
 
 // =============================================================================
@@ -413,15 +484,56 @@ function handleGameState(data) {
             username: player.username,
             score: player.score,
             isReady: player.is_ready,
-            isActor: false
+            isActor: data.current_actor === id
         };
     }
     
     updatePlayersList();
     updateLeaderboard(data.leaderboard);
     
-    // Initiate connections with existing players
-    // Small delay to ensure both sides are ready
+    // Check if this is a mid-game join
+    if (data.is_mid_game_join && data.game_started && !data.game_ended) {
+        console.log('Mid-game join detected, entering active game...');
+        gameState.gameStarted = true;
+        
+        // Show game area instead of waiting room
+        showSection('gameArea');
+        document.getElementById('gameRoomCode').textContent = gameState.roomCode;
+        document.getElementById('maxRounds').textContent = data.max_rounds;
+        document.getElementById('currentRound').textContent = data.current_round || 1;
+        
+        // Set up actor UI
+        if (data.current_actor) {
+            gameState.isActor = data.current_actor === gameState.userId;
+            updateActorUI(data.current_actor);
+        }
+        
+        // Set up round info if available
+        if (data.round_info) {
+            const guessInput = document.getElementById('guessInput');
+            const guessBtn = document.getElementById('sendGuessBtn');
+            
+            if (gameState.isActor) {
+                guessInput.disabled = true;
+                guessInput.placeholder = "You're acting this round!";
+                guessBtn.disabled = true;
+            } else {
+                guessInput.disabled = false;
+                guessInput.placeholder = `Guess the ${data.round_info.category} (${data.round_info.word_length} letters)`;
+                guessBtn.disabled = false;
+            }
+            
+            // Start timer with remaining time
+            if (data.round_info.time_remaining > 0) {
+                startTimer(data.round_info.time_remaining);
+            }
+        }
+        
+        addChatMessage('system', 'You joined the game in progress!');
+    }
+    
+    // Initiate connections with ALL other players
+    // Each player will initiate connections to players with higher IDs
     setTimeout(() => {
         Object.keys(data.players).forEach(playerId => {
             if (playerId !== gameState.userId) {
@@ -440,12 +552,24 @@ function handlePlayerJoined(data) {
     };
     
     updatePlayersList();
-    addChatMessage('system', `${data.username} joined the game`);
+    
+    // Different message for mid-game join
+    if (data.isMidGameJoin) {
+        addChatMessage('system', `${data.username} joined the game in progress!`);
+    } else {
+        addChatMessage('system', `${data.username} joined the game`);
+    }
+    
+    // Update participants grid if game is in progress
+    if (gameState.gameStarted) {
+        updateParticipantsGrid();
+    }
     
     // Initiate connection with new player after a short delay
+    // The new player has a higher chance of having a "newer" ID, so we should try to connect
     setTimeout(() => {
         initiateConnection(data.userId);
-    }, 500);
+    }, 800);
 }
 
 function handlePlayerLeft(data) {
@@ -456,12 +580,28 @@ function handlePlayerLeft(data) {
     }
     
     if (gameState.peerConnections[data.userId]) {
-        gameState.peerConnections[data.userId].close();
+        try {
+            gameState.peerConnections[data.userId].close();
+        } catch (e) {
+            console.log('Error closing connection:', e);
+        }
         delete gameState.peerConnections[data.userId];
     }
     
+    if (gameState.remoteStreams && gameState.remoteStreams[data.userId]) {
+        delete gameState.remoteStreams[data.userId];
+    }
+    
     updatePlayersList();
-    updateLeaderboard(data.gameState.leaderboard);
+    
+    // Update participants grid if game is in progress
+    if (gameState.gameStarted) {
+        updateParticipantsGrid();
+    }
+    
+    if (data.gameState && data.gameState.leaderboard) {
+        updateLeaderboard(data.gameState.leaderboard);
+    }
 }
 
 function handleReadyUpdate(data) {
@@ -723,6 +863,74 @@ function updateLeaderboard(leaderboard) {
     });
 }
 
+function updateParticipantsGrid() {
+    const grid = document.getElementById('participantsGrid');
+    if (!grid) return;
+    
+    // Get existing participant IDs in the grid
+    const existingIds = new Set();
+    grid.querySelectorAll('.participant-video-wrapper').forEach(wrapper => {
+        const id = wrapper.id.replace('participant-', '');
+        existingIds.add(id);
+    });
+    
+    // Get current player IDs
+    const currentPlayerIds = new Set(Object.keys(gameState.players));
+    
+    // Remove participants who left
+    existingIds.forEach(id => {
+        if (!currentPlayerIds.has(id)) {
+            const wrapper = document.getElementById(`participant-${id}`);
+            if (wrapper) wrapper.remove();
+        }
+    });
+    
+    // Add or update all participants
+    Object.entries(gameState.players).forEach(([id, player]) => {
+        let wrapper = document.getElementById(`participant-${id}`);
+        let video;
+        
+        if (!wrapper) {
+            // Create new wrapper
+            wrapper = document.createElement('div');
+            wrapper.className = 'participant-video-wrapper';
+            wrapper.id = `participant-${id}`;
+            
+            video = document.createElement('video');
+            video.autoplay = true;
+            video.playsinline = true;
+            video.muted = id === gameState.userId;
+            
+            const label = document.createElement('div');
+            label.className = 'participant-label' + (id === gameState.userId ? ' you' : '');
+            label.textContent = player.username + (id === gameState.userId ? ' (You)' : '');
+            
+            wrapper.appendChild(video);
+            wrapper.appendChild(label);
+            grid.appendChild(wrapper);
+        } else {
+            video = wrapper.querySelector('video');
+        }
+        
+        // Update actor highlight
+        if (player.isActor) {
+            wrapper.classList.add('is-actor');
+        } else {
+            wrapper.classList.remove('is-actor');
+        }
+        
+        // Set video source if not already set or if different
+        const expectedStream = id === gameState.userId 
+            ? gameState.localStream 
+            : (gameState.remoteStreams && gameState.remoteStreams[id]);
+        
+        if (video && expectedStream && video.srcObject !== expectedStream) {
+            video.srcObject = expectedStream;
+            video.play().catch(e => console.log('Video play error:', e));
+        }
+    });
+}
+
 function updateActorUI(actorId) {
     const actor = gameState.players[actorId];
     const actorLabel = document.getElementById('actorLabel').querySelector('span');
@@ -735,7 +943,7 @@ function updateActorUI(actorId) {
     
     const actorVideo = document.getElementById('actorVideo');
     
-    // Set actor's video
+    // Set actor's video on the big screen
     if (actorId === gameState.userId) {
         // We are the actor - show our own video
         actorVideo.srcObject = gameState.localStream;
@@ -759,6 +967,9 @@ function updateActorUI(actorId) {
             }
         }
     }
+    
+    // Update the participants grid to highlight the actor
+    updateParticipantsGrid();
 }
 
 function addChatMessage(sender, message, isGuess = true) {
@@ -841,13 +1052,62 @@ function stopTimer() {
 // =============================================================================
 // Cleanup
 // =============================================================================
+// Connection Health Check
+// =============================================================================
+
+let connectionCheckInterval = null;
+
+function startConnectionHealthCheck() {
+    // Clear any existing interval
+    if (connectionCheckInterval) {
+        clearInterval(connectionCheckInterval);
+    }
+    
+    // Check connections every 5 seconds
+    connectionCheckInterval = setInterval(() => {
+        if (!gameState.roomCode || Object.keys(gameState.players).length <= 1) return;
+        
+        console.log('Checking connection health...');
+        
+        Object.keys(gameState.players).forEach(playerId => {
+            if (playerId === gameState.userId) return;
+            
+            const pc = gameState.peerConnections[playerId];
+            
+            // If no connection exists or connection failed, try to reconnect
+            if (!pc || pc.connectionState === 'failed' || pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
+                console.log(`Reconnecting to ${playerId} (state: ${pc ? pc.connectionState : 'none'})`);
+                delete gameState.peerConnections[playerId];
+                initiateConnection(playerId);
+            }
+        });
+        
+        // Update participants grid to refresh video states
+        if (gameState.gameStarted) {
+            updateParticipantsGrid();
+        }
+    }, 5000);
+}
+
+function stopConnectionHealthCheck() {
+    if (connectionCheckInterval) {
+        clearInterval(connectionCheckInterval);
+        connectionCheckInterval = null;
+    }
+}
+
+// =============================================================================
 
 function cleanup() {
     stopTimer();
+    stopConnectionHealthCheck();
     
     // Close peer connections
     Object.values(gameState.peerConnections).forEach(pc => pc.close());
     gameState.peerConnections = {};
+    
+    // Clear remote streams
+    gameState.remoteStreams = {};
     
     // Stop local stream
     if (gameState.localStream) {
