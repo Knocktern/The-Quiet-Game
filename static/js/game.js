@@ -662,13 +662,7 @@ function handleWordChoices(data) {
         container.appendChild(btn);
     });
     
-    /*
-     * FIX: Show the overlay container instead of just the word selection div.
-     * This displays the centered popup with the dimmed background.
-     * The overlay covers the entire screen and prevents interaction with
-     * other elements until a word is selected.
-     */
-    document.getElementById('wordSelectionOverlay').classList.remove('hidden');
+    document.getElementById('wordSelectionModal').classList.remove('hidden');
 }
 
 function selectWord(word) {
@@ -678,12 +672,7 @@ function selectWord(word) {
         word: word
     });
     
-    /*
-     * FIX: Hide the overlay container instead of just the word selection div.
-     * This removes both the popup and the dimmed background, revealing
-     * the game area again.
-     */
-    document.getElementById('wordSelectionOverlay').classList.add('hidden');
+    document.getElementById('wordSelectionModal').classList.add('hidden');
 }
 
 function handleYourWord(data) {
