@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block title %}The Quiet Game{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/game.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="game-container">
+    <!-- Pre-Game Lobby -->
+    <div id="lobby" class="game-section">
+        <div class="lobby-card">
+            <h1 class="game-title">� The Quiet Game</h1>
+            <p class="game-subtitle">Act out words with sign language, let others guess!</p>
+            
+            <div class="room-actions">
+                <div class="action-group">
+                    <h3>Create New Game</h3>
+                    <input type="text" id="usernameCreate" placeholder="Enter your name" class="input-field">
+                    <button id="createRoomBtn" class="btn btn-primary">Create Room</button>
+                </div>
+                
+                <div class="divider">OR</div>
+                
+                <div class="action-group">
+                    <h3>Join Existing Game</h3>
+                    <input type="text" id="usernameJoin" placeholder="Enter your name" class="input-field">
+                    <input type="text" id="roomCodeInput" placeholder="Enter Room Code (XXXX-XXXX)" class="input-field room-code-input">
+                    <button id="joinRoomBtn" class="btn btn-secondary">Join Room</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Waiting Room -->
+    <div id="waitingRoom" class="game-section hidden">
+        <div class="waiting-card">
+            <h2>Game Lobby</h2>
+            <div class="room-info">
+                <span>Room Code:</span>
+                <span id="displayRoomCode" class="room-code">XXXX-XXXX</span>
+                <button id="copyCodeBtn" class="btn-icon" title="Copy Code">📋</button>
+            </div>
+            
+            <div class="difficulty-select">
+                <label>Difficulty:</label>
+                <select id="difficultySelect">
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                </select>
+            </div>
+            
+            <div class="players-list">
+                <h3>Players (<span id="playerCount">0</span>)</h3>
+                <ul id="playersList"></ul>
+            </div>
+            
+            <div class="ready-section">
+                <button id="readyBtn" class="btn btn-success">Ready!</button>
+                <button id="startGameBtn" class="btn btn-primary hidden" disabled>Start Game</button>
+            </div>
+            
+            <button id="leaveLobbyBtn" class="btn btn-danger">Leave Lobby</button>
+        </div>
+    </div>
+
+    <!-- Main Game Area -->
+    <div id="gameArea" class="game-section hidden">
+        <div class="game-header">
+            <div class="round-info">
+                Round <span id="currentRound">1</span> / <span id="maxRounds">10</span>
+            </div>
+            <div class="timer-container">
+                <div id="timerBar" class="timer-bar"></div>
+                <span id="timerText">60</span>
+            </div>
+            <div class="room-code-display">
+                Room: <span id="gameRoomCode">XXXX-XXXX</span>
+            </div>
+        </div>
+
+        <div class="game-main">
+            <!-- Video Section -->
+            <div class="video-section">
+                <div class="actor-video-container">
+                    <video id="actorVideo" autoplay playsinline></video>
+                    <div class="actor-label" id="actorLabel">Actor: <span>---</span></div>
+                </div>
+                
+                <!-- Word display for actor only -->
+                <div id="wordDisplay" class="word-display hidden">
+                    <div class="category-badge" id="wordCategory">Category</div>
+                    <div class="word-to-act" id="wordToAct">WORD</div>
+                    <p class="word-hint">Act this word using sign language!</p>
+                </div>
+                
+                <!-- Word selection for actor -->
+                <div id="wordSelection" class="word-selection hidden">
+                    <h3>Choose a word to act:</h3>
+                    <div id="wordChoices" class="word-choices"></div>
+                </div>
+            </div>
+
+            <!-- Side Panel -->
+            <div class="side-panel">
+                <!-- Leaderboard -->
+                <div class="leaderboard">
+                    <h3>🏆 Leaderboard</h3>
+                    <ul id="leaderboard"></ul>
+                </div>
+
+                <!-- Chat/Guesses -->
+                <div class="chat-section">
+                    <h3>💬 Guesses</h3>
+                    <div id="chatMessages" class="chat-messages"></div>
+                    <div class="chat-input-container">
+                        <input type="text" id="guessInput" placeholder="Type your guess..." class="input-field" autocomplete="off">
+                        <button id="sendGuessBtn" class="btn btn-primary">Guess</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Local video preview -->
+        <div class="local-preview">
+            <video id="localVideo" autoplay playsinline muted></video>
+            <div class="video-controls">
+                <button id="toggleVideoBtn" class="btn-icon" title="Toggle Video">📹</button>
+                <button id="toggleAudioBtn" class="btn-icon" title="Toggle Audio">🔇</button>
+                <button id="hintBtn" class="btn-icon" title="Request Hint">💡</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Word reveal overlay -->
+    <div id="wordRevealOverlay" class="overlay hidden">
+        <div class="overlay-content">
+            <h2 id="revealTitle">Round Over!</h2>
+            <p>The word was:</p>
+            <div id="revealedWord" class="revealed-word">---</div>
+            <div id="roundStats" class="round-stats"></div>
+            <p id="nextRoundInfo">Next round starting...</p>
+        </div>
+    </div>
+
+    <!-- Game over overlay -->
+    <div id="gameOverOverlay" class="overlay hidden">
+        <div class="overlay-content game-over">
+            <h2>🎉 Game Over! 🎉</h2>
+            <div id="winnerAnnouncement" class="winner-announcement"></div>
+            <div id="finalLeaderboard" class="final-leaderboard"></div>
+            <button id="playAgainBtn" class="btn btn-primary">Play Again</button>
+            <button id="exitGameBtn" class="btn btn-secondary">Exit</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="{{ url_for('static', filename='js/game.js') }}"></script>
+{% endblock %}

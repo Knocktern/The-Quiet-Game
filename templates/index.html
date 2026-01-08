@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Language Guessing Game{% endblock %}
+
+{% block content %}
+<div class="landing">
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero__content">
+            <h1 class="hero__title">
+                <span class="hero__title-line">The Quiet</span>
+                <span class="hero__title-line hero__title-line--highlight">Game 🤫</span>
+            </h1>
+            <p class="hero__subtitle">
+                A Skribbl-like game where you act out words using sign language!
+                One player signs, others guess. Learn signs while having fun.
+            </p>
+            
+            <div class="hero__cta">
+                <a href="{{ url_for('game.game_page') }}" class="btn btn--primary btn--large">
+                    <span class="btn__icon">🎮</span>
+                    Play Now
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="themes">
+        <h2 class="themes__title">Game Features</h2>
+        
+        <div class="themes__grid">
+            <article class="theme-card">
+                <div class="theme-card__icon">🤟</div>
+                <h3 class="theme-card__title">Sign Language Acting</h3>
+                <p class="theme-card__text">
+                    Act out words using signs
+                </p>
+                <p class="theme-card__description">
+                    Instead of drawing like in Skribbl, you'll use sign language
+                    to act out words for others to guess. Learn while playing!
+                </p>
+            </article>
+            
+            <article class="theme-card">
+                <div class="theme-card__icon">👥</div>
+                <h3 class="theme-card__title">Multiplayer Fun</h3>
+                <p class="theme-card__text">
+                    Play with friends in real-time
+                </p>
+                <p class="theme-card__description">
+                    Create a room and invite friends to join. Take turns acting
+                    and guessing words in a fun competitive environment.
+                </p>
+            </article>
+            
+            <article class="theme-card">
+                <div class="theme-card__icon">🏆</div>
+                <h3 class="theme-card__title">Score & Compete</h3>
+                <p class="theme-card__text">
+                    Earn points for correct guesses
+                </p>
+                <p class="theme-card__description">
+                    Guess faster to earn more points! Both guessers and actors
+                    earn points. Climb the leaderboard to win.
+                </p>
+            </article>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="features">
+        <h2 class="features__title">How To Play</h2>
+        
+        <div class="features__grid">
+            <div class="feature">
+                <div class="feature__number">1</div>
+                <div class="feature__content">
+                    <h3 class="feature__title">Create or Join a Room</h3>
+                    <p class="feature__text">
+                        Enter your name and create a room, or join an existing one
+                        using a room code shared by a friend.
+                    </p>
+                    <a href="{{ url_for('game.game_page') }}" class="feature__link">
+                        Create Room Now →
+                    </a>
+                </div>
+            </div>
+            
+            <div class="feature feature--reverse">
+                <div class="feature__number">2</div>
+                <div class="feature__content">
+                    <h3 class="feature__title">Act Out Words</h3>
+                    <p class="feature__text">
+                        When it's your turn to act, you'll pick a word and use
+                        sign language or gestures to help others guess it.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="feature">
+                <div class="feature__number">3</div>
+                <div class="feature__content">
+                    <h3 class="feature__title">Guess & Score</h3>
+                    <p class="feature__text">
+                        Type your guesses in the chat. Correct guesses earn points!
+                        The faster you guess, the more points you get.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="cta">
+        <h2 class="cta__title">Ready to Play?</h2>
+        <p class="cta__text">
+            Start a game now and invite your friends for some sign language fun!
+        </p>
+        <div class="cta__buttons">
+            <a href="{{ url_for('game.game_page') }}" class="btn btn--primary btn--large">
+                🎮 Start Playing
+            </a>
+        </div>
+    </section>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

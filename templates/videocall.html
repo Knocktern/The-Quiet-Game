@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Video Call - Multi-User Conference{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/videocall.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="videocall">
+    <!-- Pre-call Setup -->
+    <div class="videocall__setup" id="setupPanel">
+        <div class="setup-container">
+            <h1 class="setup__title">Multi-User Video Call</h1>
+            <p class="setup__subtitle">
+                Connect with multiple participants in a video conference.
+            </p>
+            
+            <div class="setup__options">
+                <!-- Create Room -->
+                <div class="setup-option">
+                    <h2 class="setup-option__title">Create a Room</h2>
+                    <p class="setup-option__text">
+                        Start a new video call room and invite others to join.
+                    </p>
+                    <button class="btn btn--primary btn--large" id="createRoomBtn">
+                        <span class="btn__icon">🎥</span>
+                        Create Room
+                    </button>
+                </div>
+                
+                <div class="setup__divider">
+                    <span>or</span>
+                </div>
+                
+                <!-- Join Room -->
+                <div class="setup-option">
+                    <h2 class="setup-option__title">Join a Room</h2>
+                    <p class="setup-option__text">
+                        Enter a room code to join an existing video call.
+                    </p>
+                    <div class="join-form">
+                        <input type="text" 
+                               id="roomCodeInput" 
+                               class="join-form__input" 
+                               placeholder="XXXX-XXXX"
+                               maxlength="9"
+                               {% if room_code %}value="{{ room_code }}"{% endif %}>
+                        <button class="btn btn--primary btn--large" id="joinRoomBtn">
+                            <span class="btn__icon">🚪</span>
+                            Join Room
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="setup__error" id="setupError" style="display: none;">
+                <span class="error-icon">⚠️</span>
+                <span class="error-message" id="setupErrorMessage"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Waiting Room -->
+    <div class="videocall__waiting" id="waitingPanel" style="display: none;">
+        <div class="waiting-container">
+            <h2 class="waiting__title">Room Created!</h2>
+            
+            <div class="room-code-display">
+                <span class="room-code-display__label">Share this code:</span>
+                <div class="room-code-display__code" id="roomCodeDisplay"></div>
+                <button class="btn btn--icon" id="copyRoomCodeBtn" title="Copy code">
+                    📋
+                </button>
+            </div>
+            
+            <p class="waiting__text" id="waitingRoomCode"></p>
+            
+            <p class="waiting__text">
+                Waiting for others to join...
+            </p>
+            
+            <div class="waiting__loader">
+                <span></span><span></span><span></span>
+            </div>
+            
+            <button class="btn btn--secondary" id="cancelWaitingBtn">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+    <!-- Active Call -->
+    <div class="videocall__active" id="callPanel" style="display: none;">
+        <!-- Header with room info -->
+        <div class="call-header">
+            <div class="call-header__info">
+                <span class="call-header__room">Room: <strong id="activeRoomCode"></strong></span>
+                <span class="call-header__participants" id="participantCount">1 participant</span>
+            </div>
+            <div class="call-header__status" id="videoStatus">Connecting...</div>
+        </div>
+
+        <!-- Video Grid Area -->
+        <div class="video-grid-container">
+            <div class="video-grid" id="videoGrid">
+                <!-- Local Video -->
+                <div class="video-item video-item--local">
+                    <video id="localVideo" autoplay playsinline muted></video>
+                    <div class="video-label">You</div>
+                </div>
+                <!-- Remote videos will be added dynamically here -->
+            </div>
+        </div>
+
+        <!-- Call Controls -->
+        <div class="call-controls">
+            <button class="control-btn control-btn--video" id="toggleVideoBtn" title="Toggle Video">
+                <span class="control-btn__icon">📹</span>
+            </button>
+            <button class="control-btn control-btn--audio" id="toggleAudioBtn" title="Toggle Audio">
+                <span class="control-btn__icon">🎤</span>
+            </button>
+            <button class="control-btn control-btn--end" id="endCallBtn" title="End Call">
+                <span class="control-btn__icon">📞</span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block socketio %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.0/socket.io.min.js"></script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/videocall.js') }}"></script>
+{% endblock %}
