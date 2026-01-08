@@ -66,14 +66,24 @@
         </div>
     </div>
 
+    <!-- Word Selection Modal Popup -->
+    <div id="wordSelectionModal" class="word-modal-overlay hidden">
+        <div class="word-modal">
+            <div class="word-modal-glow"></div>
+            <div class="word-modal-content">
+                <div class="word-modal-icon">🎯</div>
+                <h2 class="word-modal-title">Your Turn to Act!</h2>
+                <p class="word-modal-subtitle">Choose a word to perform with sign language</p>
+                <div id="wordChoices" class="word-choices-modal"></div>
+                <div class="word-modal-timer">
+                    <span>⏱️ Choose quickly!</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Game Area -->
     <div id="gameArea" class="game-section hidden">
-        <!-- Word selection for actor - at the very top -->
-        <div id="wordSelection" class="word-selection-top hidden">
-            <h3>🎯 Choose a word to act:</h3>
-            <div id="wordChoices" class="word-choices"></div>
-        </div>
-        
         <div class="game-header">
             <div class="round-info">
                 Round <span id="currentRound">1</span> / <span id="maxRounds">10</span>

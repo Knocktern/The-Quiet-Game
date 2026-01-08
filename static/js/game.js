@@ -662,7 +662,7 @@ function handleWordChoices(data) {
         container.appendChild(btn);
     });
     
-    document.getElementById('wordSelection').classList.remove('hidden');
+    document.getElementById('wordSelectionModal').classList.remove('hidden');
 }
 
 function selectWord(word) {
@@ -672,7 +672,7 @@ function selectWord(word) {
         word: word
     });
     
-    document.getElementById('wordSelection').classList.add('hidden');
+    document.getElementById('wordSelectionModal').classList.add('hidden');
 }
 
 function handleYourWord(data) {
