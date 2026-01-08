@@ -43,7 +43,7 @@
                 <button id="copyCodeBtn" class="btn-icon" title="Copy Code">📋</button>
             </div>
             
-            <div class="difficulty-select">
+            <div class="difficulty-select hidden">
                 <label>Difficulty:</label>
                 <select id="difficultySelect">
                     <option value="easy">Easy</option>
@@ -68,6 +68,12 @@
 
     <!-- Main Game Area -->
     <div id="gameArea" class="game-section hidden">
+        <!-- Word selection for actor - at the very top -->
+        <div id="wordSelection" class="word-selection-top hidden">
+            <h3>🎯 Choose a word to act:</h3>
+            <div id="wordChoices" class="word-choices"></div>
+        </div>
+        
         <div class="game-header">
             <div class="round-info">
                 Round <span id="currentRound">1</span> / <span id="maxRounds">10</span>
@@ -85,7 +91,7 @@
             <!-- Video Section -->
             <div class="video-section">
                 <div class="actor-video-container">
-                    <video id="actorVideo" autoplay playsinline></video>
+                    <video id="actorVideo" autoplay playsinline muted></video>
                     <div class="actor-label" id="actorLabel">Actor: <span>---</span></div>
                 </div>
                 
@@ -99,12 +105,6 @@
                     <div class="category-badge" id="wordCategory">Category</div>
                     <div class="word-to-act" id="wordToAct">WORD</div>
                     <p class="word-hint">Act this word using sign language!</p>
-                </div>
-                
-                <!-- Word selection for actor -->
-                <div id="wordSelection" class="word-selection hidden">
-                    <h3>Choose a word to act:</h3>
-                    <div id="wordChoices" class="word-choices"></div>
                 </div>
             </div>
 
@@ -133,8 +133,6 @@
             <video id="localVideo" autoplay playsinline muted></video>
             <div class="video-controls">
                 <button id="toggleVideoBtn" class="btn-icon" title="Toggle Video">📹</button>
-                <button id="toggleAudioBtn" class="btn-icon" title="Toggle Audio">🔇</button>
-                <button id="hintBtn" class="btn-icon" title="Request Hint">💡</button>
             </div>
         </div>
     </div>

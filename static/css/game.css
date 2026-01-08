@@ -531,7 +531,31 @@ body {
     opacity: 0.8;
 }
 
-/* Word Selection */
+/* Word Selection - Top of Screen */
+.word-selection-top {
+    text-align: center;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-radius: 16px;
+    margin-bottom: 1rem;
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(108, 99, 255, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 40px rgba(108, 99, 255, 0.8);
+    }
+}
+
+.word-selection-top h3 {
+    margin-bottom: 1rem;
+    font-size: 1.4rem;
+}
+
+/* Legacy word selection (if needed) */
 .word-selection {
     text-align: center;
     padding: 1.5rem;

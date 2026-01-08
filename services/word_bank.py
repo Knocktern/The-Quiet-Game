@@ -149,26 +149,18 @@ def get_hint(word: str, hint_level: int = 1) -> str:
     
     Args:
         word: The word to hint at
-        hint_level: 1 = first letter, 2 = length, 3 = more letters
+        hint_level: 1 = first letter, 2 = last letter (max 2 hints)
     
     Returns:
         A hint string
     """
+    # Remove spaces for letter hints
+    clean_word = word.replace(" ", "")
+    
     if hint_level == 1:
-        return f"First letter: {word[0].upper()}"
-    elif hint_level == 2:
-        return f"Word length: {len(word)} letters"
-    elif hint_level >= 3:
-        # Show some letters
-        revealed = ""
-        for i, char in enumerate(word):
-            if char == " ":
-                revealed += " "
-            elif i == 0 or i == len(word) - 1 or random.random() < 0.3:
-                revealed += char
-            else:
-                revealed += "_"
-        return f"Word: {revealed}"
+        return f"First letter: {clean_word[0].upper()}"
+    elif hint_level >= 2:
+        return f"Last letter: {clean_word[-1].upper()}"
     
     return ""
 

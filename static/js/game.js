@@ -14,6 +14,7 @@ const gameState = {
     userId: null,
     username: null,
     isActor: false,
+    isHost: false,
     currentWord: null,
     gameStarted: false,
     localStream: null,
@@ -115,8 +116,6 @@ function initializeUIHandlers() {
         if (e.key === 'Enter') sendGuess();
     });
     document.getElementById('toggleVideoBtn').addEventListener('click', toggleVideo);
-    document.getElementById('toggleAudioBtn').addEventListener('click', toggleAudio);
-    document.getElementById('hintBtn').addEventListener('click', requestHint);
     
     // Game Over
     document.getElementById('playAgainBtn').addEventListener('click', playAgain);
@@ -147,6 +146,7 @@ async function createRoom() {
 
     gameState.username = username;
     gameState.roomCode = generateRoomCode();
+    gameState.isHost = true;  // Creator is the host
 
     await initializeMedia();
     joinGameRoom();
@@ -167,6 +167,7 @@ async function joinRoom() {
 
     gameState.username = username;
     gameState.roomCode = roomCode;
+    gameState.isHost = false;  // Joiner is not the host
 
     await initializeMedia();
     joinGameRoom();
@@ -181,6 +182,17 @@ function joinGameRoom() {
 
     showSection('waitingRoom');
     document.getElementById('displayRoomCode').textContent = gameState.roomCode;
+    
+    // Show/hide host-only controls
+    const difficultySection = document.querySelector('.difficulty-select');
+    const startBtn = document.getElementById('startGameBtn');
+    
+    if (gameState.isHost) {
+        difficultySection.classList.remove('hidden');
+    } else {
+        difficultySection.classList.add('hidden');
+        startBtn.classList.add('hidden');  // Non-hosts never see start button
+    }
     
     // Start connection health check
     startConnectionHealthCheck();
@@ -235,14 +247,14 @@ async function initializeMedia() {
     try {
         gameState.localStream = await navigator.mediaDevices.getUserMedia({
             video: true,
-            audio: true
+            audio: false  // Video only - no microphone
         });
         
         document.getElementById('localVideo').srcObject = gameState.localStream;
         return true;
     } catch (error) {
-        console.error('Error accessing media devices:', error);
-        showNotification('Could not access camera/microphone', 'error');
+        console.error('Error accessing camera:', error);
+        showNotification('Could not access camera', 'error');
         return false;
     }
 }
@@ -258,13 +270,8 @@ function toggleVideo() {
 }
 
 function toggleAudio() {
-    if (gameState.localStream) {
-        const audioTrack = gameState.localStream.getAudioTracks()[0];
-        if (audioTrack) {
-            audioTrack.enabled = !audioTrack.enabled;
-            document.getElementById('toggleAudioBtn').textContent = audioTrack.enabled ? '🔇' : '🔊';
-        }
-    }
+    // Audio is disabled - video only mode
+    showNotification('This is a video-only game - no audio', 'info');
 }
 
 // =============================================================================
@@ -611,11 +618,16 @@ function handleReadyUpdate(data) {
     
     updatePlayersList();
     
-    // Show/hide start button for room creator
-    const startBtn = document.getElementById('startGameBtn');
-    if (data.allReady && Object.keys(gameState.players).length >= 2) {
-        startBtn.classList.remove('hidden');
-        startBtn.disabled = false;
+    // Show/hide start button for HOST ONLY when all players are ready
+    if (gameState.isHost) {
+        const startBtn = document.getElementById('startGameBtn');
+        if (data.allReady && Object.keys(gameState.players).length >= 2) {
+            startBtn.classList.remove('hidden');
+            startBtn.disabled = false;
+        } else {
+            startBtn.classList.add('hidden');
+            startBtn.disabled = true;
+        }
     }
 }
 
@@ -795,11 +807,8 @@ function sendGuess() {
 }
 
 function requestHint() {
-    if (gameState.isActor) return;
-    
-    gameState.socket.emit('request-hint', {
-        roomCode: gameState.roomCode
-    });
+    // Hints are now automatic at 30s and 20s remaining
+    showNotification('Hints appear automatically at 30s and 20s remaining', 'info');
 }
 
 function playAgain() {
@@ -899,7 +908,7 @@ function updateParticipantsGrid() {
             video = document.createElement('video');
             video.autoplay = true;
             video.playsinline = true;
-            video.muted = id === gameState.userId;
+            video.muted = true;  // All videos muted - video only mode
             
             const label = document.createElement('div');
             label.className = 'participant-label' + (id === gameState.userId ? ' you' : '');
@@ -1016,17 +1025,45 @@ function showNotification(message, type = 'info') {
 // =============================================================================
 
 function startTimer(seconds) {
+    // Clear any existing timer first
+    stopTimer();
+    
     gameState.timeRemaining = seconds;
+    gameState.timerMaxSeconds = seconds; // Store max for percentage calculation
+    gameState.hintsShown = 0;  // Reset hints shown for this round
+    
     const timerBar = document.getElementById('timerBar');
     const timerText = document.getElementById('timerText');
     
     timerBar.style.width = '100%';
+    timerBar.classList.remove('warning');
     timerText.textContent = seconds;
     
     gameState.timerInterval = setInterval(() => {
         gameState.timeRemaining--;
+        
+        if (gameState.timeRemaining < 0) {
+            stopTimer();
+            return;
+        }
+        
         timerText.textContent = gameState.timeRemaining;
-        timerBar.style.width = (gameState.timeRemaining / seconds * 100) + '%';
+        timerBar.style.width = (gameState.timeRemaining / gameState.timerMaxSeconds * 100) + '%';
+        
+        // Automatic hints: first at 30s remaining, second at 20s remaining
+        if (gameState.timeRemaining === 30 && gameState.hintsShown < 1) {
+            gameState.hintsShown = 1;
+            gameState.socket.emit('request-hint', {
+                roomCode: gameState.roomCode,
+                hintNumber: 1
+            });
+        } else if (gameState.timeRemaining === 20 && gameState.hintsShown < 2) {
+            gameState.hintsShown = 2;
+            gameState.socket.emit('request-hint', {
+                roomCode: gameState.roomCode,
+                hintNumber: 2
+            });
+        }
         
         if (gameState.timeRemaining <= 10) {
             timerBar.classList.add('warning');
@@ -1120,6 +1157,7 @@ function cleanup() {
     gameState.roomCode = null;
     gameState.gameStarted = false;
     gameState.isActor = false;
+    gameState.isHost = false;
     gameState.currentWord = null;
     
     // Hide overlays

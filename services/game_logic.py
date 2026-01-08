@@ -233,10 +233,21 @@ class GameState:
         
         return round_summary
     
-    def use_hint(self) -> Optional[str]:
-        """Use a hint for the current round."""
+    def use_hint(self, hint_number: int = None) -> Optional[str]:
+        """Use a hint for the current round. Max 2 hints allowed."""
         if not self.current_round:
             return None
+        
+        # If specific hint number provided, use it (for automatic hints)
+        if hint_number is not None:
+            if hint_number > 2 or hint_number <= self.current_round.hints_used:
+                return None  # Max 2 hints, don't repeat hints
+            self.current_round.hints_used = hint_number
+            return get_hint(self.current_round.word, hint_number)
+        
+        # Manual hint request - only if under limit
+        if self.current_round.hints_used >= 2:
+            return None  # Max 2 hints
         
         self.current_round.hints_used += 1
         return get_hint(self.current_round.word, self.current_round.hints_used)
